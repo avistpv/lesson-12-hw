@@ -1,7 +1,6 @@
 import {Op, WhereOptions} from "sequelize"
 import AppError from "../errors.js"
-import {Task, TaskAttributes} from "../models/task.model.js"
-import {TaskStatus, TaskPriority} from "../models/task.model.js"
+import {Task, TaskAttributes, TaskStatus, TaskPriority} from "../models/task.model.js"
 import {
     TaskFilters,
     TaskCreateInput,
@@ -17,9 +16,7 @@ const findTaskWithAssignee = async (id: number) => {
 }
 
 const buildAppliedFilters = (filters?: TaskFilters): AppliedFilters | undefined => {
-    const whereClause: Partial<TaskAttributes> & {
-        createdAt?: { [Op.gte]: Date }
-    } = {}
+    const whereClause: AppliedFilters = {}
 
     if (filters?.status) {
         whereClause.status = filters.status
@@ -33,10 +30,10 @@ const buildAppliedFilters = (filters?: TaskFilters): AppliedFilters | undefined 
         const createdAt = new Date(filters.createdAt)
         whereClause.createdAt = {
             [Op.gte]: createdAt,
-        } as any
+        }
     }
 
-    return Object.keys(whereClause).length > 0 ? (whereClause as AppliedFilters) : undefined
+    return Object.keys(whereClause).length > 0 ? whereClause : undefined
 }
 
 export const getTasks = async (filters?: TaskFilters) => {
@@ -55,10 +52,10 @@ export const getTaskById = async (id: number) => {
 export const createTask = async (input: TaskCreateInput) => {
     const createData: {
         title: string
-        description?: string
         status: TaskStatus
         priority: TaskPriority
         userId: number
+        description?: string
     } = {
         title: input.title,
         status: input.status || "pending",
@@ -93,6 +90,4 @@ export const deleteTask = async (id: number) => {
     }
 
     await task.destroy()
-    return task
 }
-

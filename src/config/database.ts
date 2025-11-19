@@ -1,6 +1,8 @@
 import dotenv from "dotenv"
 import {Dialect} from "sequelize"
 import {Sequelize} from "sequelize-typescript"
+import {Task} from "../models/task.model.js"
+import {User} from "../models/user.model.js"
 
 dotenv.config({
     path: `.env.${process.env.NODE_ENV || "development"}`,
@@ -37,7 +39,7 @@ const config: DBConfig = {
 
 const db = new Sequelize({
     ...config[process.env.NODE_ENV || "development"],
-    models: [__dirname + "/../models"],
+    models: [Task, User],
 })
 
 export default db

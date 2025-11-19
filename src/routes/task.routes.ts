@@ -1,5 +1,4 @@
-import {NextFunction, Request, Response, Router} from "express"
-import {z} from "zod"
+import {Router} from "express"
 import {
     getAllTasks,
     getTask,
@@ -7,54 +6,16 @@ import {
     updateTaskHandler,
     deleteTaskHandler,
 } from "../controllers/task.controller.js"
-import AppError from "../errors.js"
+import {
+    queryParamsSchema,
+    createTaskSchema,
+    updateTaskSchema,
+    taskIdParamsSchema,
+    validateZodSchema,
+    validateRouteParams,
+} from "../utils/validation.js"
 
 const router = Router()
-
-const taskStatusEnum = z.enum(["pending", "in-progress", "completed"])
-const taskPriorityEnum = z.enum(["low", "medium", "high"])
-
-const queryParamsSchema = z.object({
-    createdAt: z.string().optional(),
-    status: taskStatusEnum.optional(),
-    priority: taskPriorityEnum.optional(),
-})
-
-const createTaskSchema = z.object({
-    title: z.string().min(1, "Title is required"),
-    description: z.string().optional(),
-    status: taskStatusEnum.optional(),
-    priority: taskPriorityEnum.optional(),
-})
-
-const updateTaskSchema = z.object({
-    title: z.string().min(1).optional(),
-    description: z.string().optional(),
-    status: taskStatusEnum.optional(),
-    priority: taskPriorityEnum.optional(),
-})
-
-function validateZodSchema(
-    schema: z.ZodSchema,
-    errorMessage?: string,
-    useQuery = false,
-) {
-    return (req: Request, res: Response, next: NextFunction) => {
-        try {
-            const data = useQuery ? req.query : req.body
-            schema.parse(data)
-            next()
-        } catch (error) {
-            if (error instanceof z.ZodError) {
-                const message =
-                    errorMessage ||
-                    error.issues.map((e: z.ZodIssue) => e.message).join(", ")
-                return next(new AppError(message, 400))
-            }
-            next(error)
-        }
-    }
-}
 
 const validateQueryParams = validateZodSchema(
     queryParamsSchema,
@@ -63,12 +24,17 @@ const validateQueryParams = validateZodSchema(
 )
 const validateCreateTask = validateZodSchema(createTaskSchema)
 const validateUpdateTask = validateZodSchema(updateTaskSchema)
+const validateTaskId = validateRouteParams(taskIdParamsSchema)
 
-router.get("/", validateQueryParams, getAllTasks)
-router.get("/:id", getTask)
+router.get("/", (req, res, next) => {
+    if (req.originalUrl === "/tasks/") {
+        return res.status(404).send("Not Found")
+    }
+    next()
+}, validateQueryParams, getAllTasks)
+router.get("/:id", validateTaskId, getTask)
 router.post("/", validateCreateTask, createTaskHandler)
-router.put("/:id", validateUpdateTask, updateTaskHandler)
-router.delete("/:id", deleteTaskHandler)
+router.put("/:id", validateTaskId, validateUpdateTask, updateTaskHandler)
+router.delete("/:id", validateTaskId, deleteTaskHandler)
 
 export default router
-
