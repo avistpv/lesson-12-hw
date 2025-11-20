@@ -20,11 +20,15 @@ const asyncHandler = <
     ReqBody = {},
     ReqQuery = {},
 >(
-    fn: (req: Request<P, ResBody, ReqBody, ReqQuery>, res: Response<ResBody>) => Promise<void | Response<ResBody>>
+    fn: (
+        req: Request<P, ResBody, ReqBody, ReqQuery>,
+        res: Response<ResBody>
+    ) => Promise<void | Response<ResBody>>
 ) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
-            await fn(req as Request<P, ResBody, ReqBody, ReqQuery>, res)
+            // @ts-expect-error - Express provides Request<ParamsDictionary> but validation middleware ensures correct types at runtime
+            await fn(req, res)
         } catch (error) {
             next(error)
         }
@@ -39,10 +43,9 @@ export const getAllTasks = asyncHandler<{}, {}, {}, TaskFilters>(
     }
 )
 
-export const getTask = asyncHandler<{ id: string }>(
+export const getTask = asyncHandler<{ id: number }>(
     async (req, res) => {
-        const taskId = req.params.id as unknown as number
-        const task = await getTaskById(taskId)
+        const task = await getTaskById(req.params.id)
 
         if (!task) {
             throw new AppError("Task not found", 404)
@@ -61,11 +64,10 @@ export const createTaskHandler = asyncHandler<{}, unknown, TaskRequestBody>(
     }
 )
 
-export const updateTaskHandler = asyncHandler<{ id: string }, unknown, TaskRequestBody>(
+export const updateTaskHandler = asyncHandler<{ id: number }, unknown, TaskRequestBody>(
     async (req, res) => {
-        const taskId = req.params.id as unknown as number
         const input = convertRequestBodyToUpdateInput(req.body)
-        const updatedTask = await updateTask(taskId, input)
+        const updatedTask = await updateTask(req.params.id, input)
 
         if (!updatedTask) {
             throw new AppError("Task not found", 404)
@@ -75,10 +77,9 @@ export const updateTaskHandler = asyncHandler<{ id: string }, unknown, TaskReque
     }
 )
 
-export const deleteTaskHandler = asyncHandler<{ id: string }>(
+export const deleteTaskHandler = asyncHandler<{ id: number }>(
     async (req, res) => {
-        const taskId = req.params.id as unknown as number
-        await deleteTask(taskId)
+        await deleteTask(req.params.id)
         res.status(204).send()
     }
 )
